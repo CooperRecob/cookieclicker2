@@ -3,11 +3,9 @@
 <head>
 
 
-<!--<link href="https://fonts.googleapis.com/css?family=Kavoon&subset=latin,latin-ext" rel="stylesheet" type="text/css">-->
 <link href='https://fonts.googleapis.com/css?family=Merriweather:900&subset=latin,latin-ext' rel='stylesheet' type='text/css'>
 
-<!-- Facebook Pixel Code -->
-	<script>
+<script>
 	!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
 	n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
 	n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
@@ -18,15 +16,7 @@
 	</script>
 	<noscript><img height="1" width="1" style="display:none"
 	src="https://www.facebook.com/tr?id=357399801355203&ev=PageView&noscript=1"></noscript>
-<!-- end code -->
-<!-- /external -->
-
 <title>FalconNet</title>
-<!--
-Code and graphics copyright Orteil, 2013-2023
-Feel free to alter this code to your liking, but please do not re-host it, do not profit from it and do not present it as your own.
--->
-
 <meta name="viewport" content="width=900, initial-scale=1">
 <link rel="shortcut icon" href="img/favicon.ico" />
 <script src="base64.js"></script>
@@ -38,15 +28,13 @@ var App=typeof App==='undefined'?0:App;
 </script>
 
 <link href="style.css?v=9" rel="stylesheet" type="text/css">
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
 <script  src="main.js?v=10"></script>
 
-<!--[if IE]>
-<style type="text/css">
-	#ifIE9{display:block;}
-</style>
-<![endif]-->
-
-<!--[if lt IE9]><script src="excanvas.compiled.js"></script><![endif]-->
 </head>
 <body>
 
@@ -85,8 +73,8 @@ var App=typeof App==='undefined'?0:App;
 					<div class="spinnySmall"></div>
 					<div id="loading" class="title">Loading...</div>
 					<div id="failedToLoad" class="title">This is taking longer than expected.<br>
-					<div style="font-size:65%;line-height:120%;"><!-- error -->Slow connection? If not, please make sure your javascript is enabled, then refresh.<br>
-					If problems persist, this might be on our side - wait a few minutes, then hit ctrl+f5!<!-- /error --></div></div>
+					<div style="font-size:65%;line-height:120%;">Slow connection? If not, please make sure your javascript is enabled, then refresh.<br>
+					If problems persist, this might be on our side - wait a few minutes, then hit ctrl+f5!</div></div>
 					<div id="ifIE9" class="title" style="font-size:100%;line-height:120%;">Your browser may not be recent enough to run Cookie Clicker.<br>You might want to update, or switch to a more modern browser such as Chrome or Firefox.</div>
 				</div>
 			</div>
@@ -147,7 +135,8 @@ var App=typeof App==='undefined'?0:App;
 				<div id="buildingsTitle" class="inset title zoneTitle">Buildings</div>
 				<div id="buildingsMaster"></div>
 				<div id="rows"></div>
-				<div id="menu"></div>
+				<div id="menu">
+                    </div>
 			</div>
 		</div>
 		
@@ -170,6 +159,111 @@ var App=typeof App==='undefined'?0:App;
 	</div>
 
 </div>
+
+<script>
+    // 1. PASTE YOUR FIREBASE CONFIGURATION HERE
+    const firebaseConfig = {
+    apiKey: "AIzaSyBsYr7kWuXRg_ua8ggW9WmfokMbmmpNkns",
+    authDomain: "cookieclicker-2d4cd.firebaseapp.com",
+    projectId: "cookieclicker-2d4cd",
+    storageBucket: "cookieclicker-2d4cd.firebasestorage.app",
+    messagingSenderId: "1092277159111",
+    appId: "1:1092277159111:web:194db73b9b6b65e967eae2",
+    measurementId: "G-4JES34X6G6"
+  };    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // --- Authentication Functions ---
+    function login() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).catch(error => {
+            console.error("Login failed:", error);
+            Game.Notify('Login failed', error.message, [10, 6]);
+        });
+    }
+
+    function logout() {
+        auth.signOut().then(() => {
+            // Reload the page to load the local save
+            location.reload();
+        });
+    }
+
+    // --- Wait for the Game object to be ready ---
+    document.addEventListener('DOMContentLoaded', (event) => {
+        // This ensures we don't try to modify the Game object before it exists.
+        var checkGameReady = setInterval(function() {
+            if (typeof Game !== 'undefined' && Game.ready) {
+                clearInterval(checkGameReady);
+                
+                // --- Function Wrapping Logic ---
+                // Store the original UpdateMenu function in a new variable
+                var originalUpdateMenu = Game.UpdateMenu;
+                
+                // Redefine Game.UpdateMenu with our new logic
+                Game.UpdateMenu = function() {
+                    // First, run the original function to build the menu as normal
+                    originalUpdateMenu();
+                    
+                    // Now, inject our login UI into the newly-built menu
+                    injectAuthUI();
+                    updateUI(auth.currentUser);
+                }
+            }
+        }, 100);
+    });
+
+
+    // --- UI Injection and Update Functions ---
+    function injectAuthUI() {
+        // Check if the UI has already been injected to prevent duplication
+        if (document.getElementById('authContainer')) {
+            return;
+        }
+
+        const generalSettingsDiv = document.querySelector('#menu .subsection .title');
+        if (generalSettingsDiv && generalSettingsDiv.textContent.includes('General')) {
+            const container = generalSettingsDiv.parentNode;
+            
+            const authHTML = `
+                <div id="authContainer">
+                    <div class="line"></div>
+                    <div class="listing">
+                        <a id="loginBtn" class="option smallFancyButton" onclick="login()">Log in with Google</a>
+                        <a id="logoutBtn" class="option smallFancyButton" style="display:none;" onclick="logout()">Log out</a>
+                        <label id="userStatus">Not logged in. Log in to save your progress to the cloud!</label>
+                    </div>
+                </div>
+            `;
+            
+            const saveListing = Array.from(container.querySelectorAll('.listing')).find(el => el.textContent.includes('Save manually'));
+            if (saveListing) {
+                saveListing.insertAdjacentHTML('afterend', authHTML);
+            }
+        }
+    }
+    
+    function updateUI(user) {
+        const loginBtn = document.getElementById('loginBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userStatus = document.getElementById('userStatus');
+
+        if (loginBtn && logoutBtn && userStatus) {
+            if (user) {
+                loginBtn.style.display = 'none';
+                logoutBtn.style.display = 'inline-block';
+                userStatus.innerHTML = `Logged in as: <b>${user.email}</b>`;
+            } else {
+                loginBtn.style.display = 'inline-block';
+                logoutBtn.style.display = 'none';
+                userStatus.textContent = 'Not logged in. Log in to save your progress to the cloud!';
+            }
+        }
+    }
+
+</script>
 
 </body>
 </html>
