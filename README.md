@@ -52,3 +52,7 @@ From the root directory :
 #### 5. Report update here :)
 
 If you happen to update, please make a pull request for others to benefit, thanks!
+
+#### 6. What I added:
+* I added google saves with firebase so thats pretty cool
+* I also got rid of that top bar and the ads from the original site.
