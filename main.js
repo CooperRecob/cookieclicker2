@@ -2845,7 +2845,8 @@ Game.WriteSave=function(type)
                 console.log("Attempting to save to cloud for user:", user.uid); // DEBUG LINE
                 db.collection('saves').doc(user.uid).set({
                     saveData: saveDataString,
-                    lastSaved: firebase.firestore.FieldValue.serverTimestamp()
+                    lastSaved: firebase.firestore.FieldValue.serverTimestamp(),
+					userEmail: user.email
                 })
                 .then(() => {
                     if (document.hasFocus()) {
